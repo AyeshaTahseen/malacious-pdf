@@ -1,0 +1,29 @@
+Apache Multi Views Attack
+Note: We have to specify which resource we are requesting from the server for which the alternates are returned by the server.
+For Ex: If we request /index file and specify an invalid content type header then vulnerable Apache should return all possible alternates like index.html, index.gif, index.jsp etc.
+So instance URL should be the one which we have to request from the apache server.
+Steps:
+Configure your browser to use a proxy tool such as Burp Suite.
+Log in to the application.
+Turn on Request Interception in Burp.
+Navigate to the URL mentioned in the “Instances” section.
+In Burp, send the intercepted request to Burp Repeater.
+Modify the Accept header to "application/whatever; q=1.0" and then click the “Go” button.
+Observe the response in Burp Repeater.
+Note that it contains the "Alternates" header, meaning that Apache Multiviews is enabled on the server.
+Caption: The application’s response in Burp showing Apache Multiviews is enabled on the server.
+Screenshot: Burp Repeater 
+
+
+Finding: Apache MultiViews Attack
+
+
+The Apache "multiviews" feature is enabled on the web server. When this feature is enabled, Apache responds with different representations of a resource depending on the MIME-type specified in the request's "Accept" header. For example, take the following request for the resource "Test", with no file extension supplied:
+GET /webroot/Test HTTP/1.1Host: 127.0.0.1Accept: text/htmlWith multiviews enabled in the "webroot" directory, the application will attempt to return a valid resource that matches the name provided in the request (e.g. "Test"), as well as the file type specified in the "Accept" header (e.g. "text/html"). In this example, if the directory contained "Test.html" and "Test.jpeg", the "Test.html" page would be returned since the file type matches the request.
+In instances where no files in a directory match the requested type, Apache will return a list of all possible matches. This can be abused by submitting requests to the target server with an invalid value in the "Accept" header to return all possible options for the file name. For example, the following request once again tries to access a resource named "Test", but uses an improper value for the "Accept" header:
+GET /webroot/Test HTTP/1.1Host: 127.0.0.1Accept: text/VOIDSince no files exist that match the name and file type requested, the following response is returned with a list of all files called "Test", regardless of their file type.
+HTTP/1.1 300 Multiple ChoicesDate: Sat, 30 Aug 2016 11:30:23 GMTAlternates: {"Test.html" 1 {type text/html} {length 100}}, {"Test.txt" 1 {type text/plain} {length 100}}, {"Test.jpeg" 1 {type image/jpeg} {length 1000}}, {"Test.7z" 1 {type application/x-7z-compressed} {length 50}}, {"Test.exe" 1 {type application/x-msdownload} {length 2000}}
+The Apache multiviews feature provides an attacker with a means to locate files, application pages and other resources on the web server more efficiently than would otherwise be possible. If discovered resources are not properly protected by authentication and/or authorization, the attacker may gain access to sensitive data (e.g. via exported or archive files) and application functionality (e.g. via test scripts and unlisted application pages). Revealing all possible resource types may also reveal information about the application's technology stack that can be used to create and execute more targeted attacks.
+
+
+The multiviews option must be disabled for all directories in Apache's configuration files, (e.g. httpd.conf or .htaccess). As multiviews is not enabled by default, any instance of "MultiViews" being set by the Options directive must be removed. The use of multiviews can also be explicitly denied by setting "-MultiViews" in the directory options.
